@@ -8,7 +8,7 @@ import time
 
 load_dotenv()
 
-print(os.getenv("GROQ_API_KEY"))  # For testing
+#print(os.getenv("GROQ_API_KEY"))  # For testing
 
 client = Groq(
     api_key=os.getenv("GROQ_API_KEY")

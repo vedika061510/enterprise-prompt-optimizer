@@ -3,6 +3,11 @@ from sqlalchemy import select
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from llm import generate
+from llm import client
+from fastapi import UploadFile, File
+from pdf_utils import extract_text
+import document_store
+import os
 
 app = FastAPI()
 
@@ -17,6 +22,7 @@ app.add_middleware(
 @app.get("/")
 def home():
     return {"message": "Working"}
+
 @app.get("/history")
 def get_history():
     stmt = select(history)
@@ -34,6 +40,7 @@ def get_history():
         })
 
     return rows
+
 @app.get("/compare")
 def compare(query: str):
     return {
@@ -42,3 +49,47 @@ def compare(query: str):
     "few_shot": generate("few_shot", query),
     "cot": generate("cot", query)
 }
+
+@app.post("/upload")
+async def upload_pdf(file: UploadFile = File(...)):
+
+    file_path = f"uploads/{file.filename}"
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(await file.read())
+
+    text = extract_text(file_path)
+    document_store.DOCUMENT_TEXT = text
+    return {
+        "message": "Uploaded successfully",
+        "preview": text[:1000]
+    }
+
+@app.get("/ask-document")
+def ask_document(query: str):
+
+    context = document_store.DOCUMENT_TEXT[:5000]
+
+    prompt = f"""
+    Answer only using the document below.
+
+    Document:
+    {context}
+
+    Question:
+    {query}
+    """
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
+
+    return {
+        "answer": response.choices[0].message.content
+    }
