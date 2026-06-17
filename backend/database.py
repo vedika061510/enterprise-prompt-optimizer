@@ -19,6 +19,35 @@ history = Table(
     Column("latency", Float)
 )
 
+from sqlalchemy import Table, Column, Integer, String
+
+users = Table(
+    "users",
+    metadata,
+
+    Column(
+        "id",
+        Integer,
+        primary_key=True
+    ),
+
+    Column(
+        "username",
+        String
+    ),
+
+    Column(
+        "email",
+        String,
+        unique=True
+    ),
+
+    Column(
+        "password_hash",
+        String
+    )
+)
+
 metadata.create_all(engine)
 
 conn = engine.connect()

@@ -1,7 +1,17 @@
+import Analytics from "./components/Analytics";
 import { useState } from "react";
 import axios from "axios";
+import Login from "./Login";
+import Register from "./Register";
 
 function App() {
+  const cardStyle = {
+  background: "white",
+  padding: "15px",
+  marginBottom: "15px",
+  borderRadius: "10px",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+};
   const [query, setQuery] = useState("");
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
@@ -9,18 +19,26 @@ function App() {
   const [pdfAnswer, setPdfAnswer] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
   const [pdfQuestion, setPdfQuestion] = useState("");
-
+  const [loading, setLoading] = useState(false);
+  const [loggedIn, setLoggedIn] =
+    useState(
+      !!localStorage.getItem("token")
+    );
   const handleSubmit = async () => {
-    try {
-      const res = await axios.get(
-        `http://127.0.0.1:8000/compare?query=${encodeURIComponent(query)}`
-      );
+  try {
+    setLoading(true);
 
-      setResult(res.data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    const res = await axios.get(
+      `http://127.0.0.1:8000/compare?query=${encodeURIComponent(query)}`
+    );
+
+    setResult(res.data);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const loadHistory = async () => {
     try {
@@ -70,10 +88,51 @@ function App() {
     }
   };
 
-  return (
-    <div style={{ padding: "20px" }}>
-      <h1>Enterprise Prompt Optimizer</h1>
+  if (!loggedIn) {
 
+  return (
+    <div>
+
+      <Login
+        onLogin={() =>
+          setLoggedIn(true)
+        }
+      />
+
+      <hr />
+
+      <Register />
+
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        padding: "20px",
+        backgroundColor: "#f4f4f4",
+        minHeight: "100vh"
+      }}
+    >
+      <h1>Enterprise Prompt Optimizer</h1>
+      <p>
+        Compare Zero Shot, Role Based, Few Shot and Chain of Thought
+        prompting techniques. Upload PDFs and ask questions using AI.
+      </p>  
+      <button
+  onClick={() => {
+
+    localStorage.removeItem(
+      "token"
+    );
+
+    window.location.reload();
+
+  }}
+>
+  Logout
+</button>
       <input
         type="text"
         value={query}
@@ -87,17 +146,21 @@ function App() {
       />
 
       <button onClick={handleSubmit}>
-        Compare Prompts
-      </button>
+  Compare Prompts
+</button>
 
-      <button
-        onClick={loadHistory}
-        style={{ marginLeft: "10px" }}
-      >
-        Load History
-      </button>
+<button
+  onClick={loadHistory}
+  style={{ marginLeft: "10px" }}
+>
+  Load History
+</button>
 
-      <hr />
+{loading && (
+  <p>Generating responses...</p>
+)}
+
+<hr />
 
       <h2>PDF Upload & Chat</h2>
 
@@ -137,11 +200,7 @@ function App() {
 
       {pdfAnswer && (
         <div
-          style={{
-            border: "1px solid #ccc",
-            padding: "15px",
-            marginTop: "20px"
-          }}
+          style={cardStyle}
         >
           <h2>PDF Answer</h2>
           <p>{pdfAnswer}</p>
@@ -152,11 +211,7 @@ function App() {
       {result && (
         <div style={{ marginTop: "30px" }}>
           <div
-            style={{
-              border: "1px solid #ccc",
-              padding: "15px",
-              marginBottom: "10px"
-            }}
+            style={cardStyle}
           >
             <h2>Zero Shot</h2>
             <p>{result.zero_shot.response}</p>
@@ -165,11 +220,7 @@ function App() {
           </div>
 
           <div
-            style={{
-              border: "1px solid #ccc",
-              padding: "15px",
-              marginBottom: "10px"
-            }}
+            style={cardStyle}
           >
             <h2>Role Based</h2>
             <p>{result.role_based.response}</p>
@@ -178,11 +229,7 @@ function App() {
           </div>
 
           <div
-            style={{
-              border: "1px solid #ccc",
-              padding: "15px",
-              marginBottom: "10px"
-            }}
+            style={cardStyle}
           >
             <h2>Few Shot</h2>
             <p>{result.few_shot.response}</p>
@@ -191,10 +238,7 @@ function App() {
           </div>
 
           <div
-            style={{
-              border: "1px solid #ccc",
-              padding: "15px"
-            }}
+            style={cardStyle}
           >
             <h2>Chain of Thought</h2>
             <p>{result.cot.response}</p>
@@ -204,6 +248,8 @@ function App() {
         </div>
       )}
 
+      <Analytics result={result} />
+
       {history.length > 0 && (
         <div style={{ marginTop: "30px" }}>
           <h2>Query History</h2>
@@ -211,11 +257,7 @@ function App() {
           {history.map((item) => (
             <div
               key={item.id}
-              style={{
-                border: "1px solid #ccc",
-                padding: "10px",
-                marginBottom: "10px"
-              }}
+              style={cardStyle}
             >
               <p><b>Query:</b> {item.query}</p>
               <p><b>Prompt:</b> {item.prompt_type}</p>
